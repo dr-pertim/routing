@@ -4,6 +4,16 @@
       "from": "drandrerufino.com.br",
       "to": "www.drpertim.com.br",
       "path": "/dentista/mg/andre-rufino"
+    },
+    {
+      "from": "outro-profissional.com.br",
+      "to": "www.drpertim.com.br",
+      "path": "/dentista/sp/joao-silva"
+    },
+    {
+      "from": "mais-um-site.com.br",
+      "to": "www.drpertim.com.br",
+      "path": "/fisioterapeuta/mg/maria-santos"
     }
   ]
 }
