@@ -13,6 +13,8 @@ const WORKER_URL = 'pertim-routing.lgabrich-c.workers.dev'
 
 if (!TOKEN || !ZONE_ID) {
   console.error('❌ ERRO: CLOUDFLARE_API_TOKEN e ZONE_ID são obrigatórios')
+  console.error(`  TOKEN: ${TOKEN ? '✓' : '✗'}`)
+  console.error(`  ZONE_ID: ${ZONE_ID ? '✓' : '✗'}`)
   process.exit(1)
 }
 
@@ -20,7 +22,8 @@ if (!TOKEN || !ZONE_ID) {
 const domainsData = JSON.parse(fs.readFileSync('./domains.json', 'utf8'))
 const domains = domainsData.domains || []
 
-console.log(`\n📋 Criando CNAMEs para ${domains.length} domínio(s)\n`)
+console.log(`\n📋 Criando CNAMEs para ${domains.length} domínio(s)`)
+console.log(`🔑 Zone ID: ${ZONE_ID}\n`)
 
 async function createCNAMEs() {
   let success = 0
@@ -45,8 +48,8 @@ async function createCNAMEs() {
             type: 'CNAME',
             name: domain,
             content: WORKER_URL,
-            ttl: 1, // Automático
-            proxied: true // Proxied (laranja no CF)
+            ttl: 1,
+            proxied: true
           })
         }
       )
@@ -61,7 +64,7 @@ async function createCNAMEs() {
         console.log('✓ Já existe')
         success++
       } else {
-        const msg = data.errors?.[0]?.message || `HTTP ${response.status}`
+        const msg = data.errors?.[0]?.message || data.errors?.[0] || `HTTP ${response.status}`
         console.log(`❌ ${msg}`)
         failed++
       }
