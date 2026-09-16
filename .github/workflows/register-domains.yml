@@ -1,0 +1,41 @@
+name: Register Custom Domains
+
+on:
+  push:
+    paths:
+      - 'domains.json'
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Domínio específico (deixa vazio pra registrar tudo)'
+        required: false
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Parse domains.json
+        id: parse
+        run: |
+          node scripts/parse-domains.js
+        env:
+          DOMAIN_FILTER: ${{ github.event.inputs.domain }}
+
+      - name: Register domains
+        run: |
+          node scripts/register-domains.js
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_WORKER_NAME: routing

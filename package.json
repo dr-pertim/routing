@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler publish"
+    "deploy": "wrangler publish",
+    "register-domains": "node scripts/register-domains.js"
   },
   "dependencies": {},
   "devDependencies": {
