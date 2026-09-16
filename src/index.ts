@@ -22,9 +22,11 @@ export default {
     })
 
     if (route) {
-      // Redireciona pro destino
+      // Redireciona pro destino. Sem o caso especial da raiz ("/"), dava
+      // "/dentista/mg/andre-rufino/" (barra sobrando) e o Next.js (sem
+      // trailingSlash) respondia 404 em vez de servir a página.
       url.hostname = route.to
-      url.pathname = route.path + url.pathname
+      url.pathname = route.path + (url.pathname === '/' ? '' : url.pathname)
       return fetch(new Request(url, request))
     }
 
