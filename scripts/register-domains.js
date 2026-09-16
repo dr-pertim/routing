@@ -7,11 +7,10 @@
 
 import fs from 'fs'
 
-const API_BASE = 'https://api.cloudflare.com/client/v4'
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID
 const WORKER_NAME = process.env.CLOUDFLARE_WORKER_NAME || 'routing'
-const DOMAIN_FILTER = process.env.DOMAIN_FILTER // opcional: registrar só um domínio
+const DOMAIN_FILTER = process.env.DOMAIN_FILTER
 
 if (!TOKEN || !ACCOUNT_ID) {
   console.error('❌ ERRO: CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID são obrigatórios')
@@ -44,20 +43,20 @@ async function registerDomains() {
     process.stdout.write(`${step} ${domain.padEnd(30)} ... `)
 
     try {
-      const response = await fetch(
-        `${API_BASE}/accounts/${ACCOUNT_ID}/workers/routes`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${TOKEN}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            pattern: `${domain}/*`,
-            script: WORKER_NAME
-          })
-        }
-      )
+      // API endpoint correto do Cloudflare
+      const url = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/services/${WORKER_NAME}/environments/production/routes`
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          pattern: `${domain}/*`,
+          script: WORKER_NAME
+        })
+      })
 
       const data = await response.json()
 
@@ -69,8 +68,9 @@ async function registerDomains() {
         console.log('✓ Já registrado')
         success++
       } else {
-        const msg = data.errors?.[0]?.message || 'Erro desconhecido'
+        const msg = data.errors?.[0]?.message || `HTTP ${response.status}`
         console.log(`❌ ${msg}`)
+        console.log(`   URL: ${url}`)
         failed++
       }
     } catch (err) {
