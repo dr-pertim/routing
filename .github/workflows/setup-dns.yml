@@ -1,0 +1,46 @@
+name: Setup DNS (Create CNAMEs & Custom Domains)
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Domínio principal (ex: drandrerufino.com.br)'
+        required: true
+        type: string
+
+jobs:
+  setup-dns:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Get Zone ID
+        id: zone
+        run: |
+          ZONE_ID=$(node scripts/get-zone-id.js)
+          echo "zone_id=$ZONE_ID" >> $GITHUB_OUTPUT
+          echo "✅ Zone ID: $ZONE_ID"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DOMAIN: ${{ github.event.inputs.domain }}
+
+      - name: Create CNAMEs
+        run: node scripts/create-cname.js
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ZONE_ID: ${{ steps.zone.outputs.zone_id }}
+
+      - name: Register Custom Domains
+        run: node scripts/add-custom-domain.js
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ZONE_ID: ${{ steps.zone.outputs.zone_id }}
+
+      - name: ✅ DNS configurado!
+        run: echo "✅ CNAMEs criados e Custom Domains registrados com sucesso!"

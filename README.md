@@ -10,11 +10,11 @@ Cloudflare Worker genérico para rotear múltiplos domínios customizados pro Pe
 
 ## Fluxo de funcionamento
 
-### 1️⃣ **Automático (GitHub Actions)**
-Toda vez que você faz push em `routes.json`, o Worker é atualizado automaticamente.
+### 1️⃣ **Setup inicial (uma única vez)**
+Configurar DNS dos domínios pra apontar pro Worker (automático via GitHub Actions).
 
-### 2️⃣ **Manual (Cloudflare UI)**
-Registrar cada domínio customizado (uma única vez por domínio).
+### 2️⃣ **Automático (GitHub Actions)**
+Toda vez que você faz push em `routes.json`, o Worker é atualizado automaticamente.
 
 ## Como adicionar um novo domínio
 
@@ -37,71 +37,84 @@ Registrar cada domínio customizado (uma única vez por domínio).
 }
 ```
 
-### Passo 2: Fazer push
+### Passo 2: Editar `domains.json`
+
+```json
+{
+  "domains": [
+    "drandrerufino.com.br",
+    "www.drandrerufino.com.br",
+    "novo-dominio.com.br",        // ← NOVO
+    "www.novo-dominio.com.br"     // ← NOVO (se tiver www)
+  ]
+}
+```
+
+### Passo 3: Fazer push
 
 ```bash
-git add routes.json
+git add routes.json domains.json
 git commit -m "Add novo-dominio.com.br routing"
 git push
 ```
 
 → GitHub Actions faz deploy automático ✅
 
-### Passo 3: Registrar o domínio no Cloudflare (manual)
+### Passo 4: Configurar DNS (primeira vez de cada domínio)
 
-1. Acesse: https://dash.cloudflare.com/
-2. Vá em: **Workers & Pages**
-3. Clique em: **pertim-routing**
-4. Abra a aba: **Settings**
-5. Clique em: **Triggers**
-6. Na seção **Custom Domains**, clique: **Add Custom Domain**
-7. Digite: `novo-dominio.com.br`
-8. Cloudflare valida que o domínio é seu
-9. Clique: **Add**
+**Se é a primeira vez que usa o domínio:**
 
-Pronto! ✨
+1. Repo → **Actions** → **Setup DNS (Create CNAMEs)**
+2. **Run workflow**
+3. Preecha o campo **Domain**: `novo-dominio.com.br`
+4. Clique **Run workflow**
 
-### Repetir para versão com `www`
+→ Cloudflare cria CNAMEs automaticamente e domínio aponta pro Worker ✅
 
-Se o domínio tem `www`, registre também:
-- `www.novo-dominio.com.br`
+**Próximas vezes:** só precisa fazer push em `routes.json` e `domains.json`.
 
-Mesmo passo a passo, só muda o domínio.
+## Setup inicial (primeira vez no projeto)
 
-## Setup inicial
+### 1. Configurar Secrets do GitHub
+
+**Repo → Settings → Secrets and variables → Actions**
+
+Adicione:
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+#### Como pegar esses valores:
+
+**CLOUDFLARE_API_TOKEN:**
+1. https://dash.cloudflare.com/profile/api-tokens
+2. **Create Token** → "Create Custom Token"
+3. Permissões necessárias:
+   - `Account → Workers Scripts (Write)`
+   - `Zone → DNS (Edit)` ← importante pra criar CNAMEs
+4. Copia o token → Cola em GitHub Secrets
+
+**CLOUDFLARE_ACCOUNT_ID:**
+1. https://dash.cloudflare.com/ (qualquer página)
+2. URL tem: `dash.cloudflare.com/?account=AQUI_ESTA_O_ID`
+3. Copia o ID → Cola em GitHub Secrets
+
+### 2. Setup do projeto
 
 ```bash
 git clone https://github.com/dr-pertim/routing.git
 cd routing
 npm install
-npm run dev        # dev local (opcional)
-npm run deploy     # deploy manual (normalmente automático via GitHub)
+npm run deploy     # deploy manual (normalmente automático)
 ```
 
-## Secrets do GitHub
+### 3. Configurar o primeiro domínio
 
-Pra GitHub Actions fazer deploy automático, configure em:
+1. Edita `routes.json` com o primeiro domínio
+2. Edita `domains.json` com o primeiro domínio (+ www se tiver)
+3. Faz push
+4. Repo → **Actions** → **Setup DNS** → executa com o domínio
 
-**Repo → Settings → Secrets and variables → Actions**
-
-Adicione:
-- `CLOUDFLARE_API_TOKEN` — token da sua conta Cloudflare
-- `CLOUDFLARE_ACCOUNT_ID` — ID da conta Cloudflare
-
-### Como pegar esses valores:
-
-**CLOUDFLARE_API_TOKEN:**
-1. https://dash.cloudflare.com/profile/api-tokens
-2. **Create Token** → "Create Custom Token"
-3. Permissões mínimas:
-   - `Account → Workers Scripts (Write)`
-4. Copia o token
-
-**CLOUDFLARE_ACCOUNT_ID:**
-1. https://dash.cloudflare.com/ (qualquer página)
-2. No canto superior direito, clique em sua conta
-3. Copie o ID que aparece na URL: `dash.cloudflare.com/?account=AQUI_ESTA_O_ID`
-4. Cole como secret
+→ Pronto! Primeiro domínio está configurado ✅
 
 ## Estrutura de arquivos
 
@@ -109,10 +122,14 @@ Adicione:
 routing/
 ├── src/
 │   └── index.ts              (código do Worker)
-├── routes.json               (mapeamento de domínios)
+├── routes.json               (mapeamento de rotas)
+├── domains.json              (lista de domínios)
 ├── scripts/
-│   ├── register-domains.js   (registro manual via CLI)
-│   └── get-worker-id.js      (pega ID do worker)
+│   ├── create-cname.js       (cria CNAMEs no Cloudflare)
+│   └── get-zone-id.js        (busca Zone ID do domínio)
+├── .github/workflows/
+│   ├── deploy.yml            (deploy do Worker - automático)
+│   └── setup-dns.yml         (setup DNS - manual)
 ├── wrangler.toml             (config Wrangler)
 ├── package.json
 └── README.md
@@ -121,13 +138,18 @@ routing/
 ## Troubleshooting
 
 **Worker não faz deploy?**
-- Verifica GitHub Actions → Deploy Worker
-- Vê se `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID` estão corretos em Secrets
+- GitHub Actions → Deploy Worker
+- Verifica se `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID` estão corretos
 
-**Domínio não funciona após registrar?**
+**CNAMEs não criaram?**
+- Verifica se o token tem permissão `Zone → DNS (Edit)`
+- Confirma que o domínio está em Cloudflare
+
+**Domínio não funciona após CNAME?**
 - Espera 1-2 minutos pra propagação
 - Verifica se `routes.json` tem a rota correta
-- Confirma que registrou o Custom Domain no Cloudflare (Settings → Triggers)
+- Testa no terminal: `dig novo-dominio.com.br`
 
 **Dúvidas?**
 - Documentação oficial: https://developers.cloudflare.com/workers/
+- Cloudflare DNS: https://developers.cloudflare.com/dns/
