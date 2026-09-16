@@ -1,0 +1,10 @@
+name = "pertim-routing"
+type = "javascript"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Será preenchido com custom domains via UI do Cloudflare
+# Exemplo:
+# [[env.production.routes]]
+# pattern = "drandrerufino.com.br/*"
+# zone_name = "drandrerufino.com.br"

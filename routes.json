@@ -1,0 +1,9 @@
+{
+  "routes": [
+    {
+      "from": "drandrerufino.com.br",
+      "to": "www.drpertim.com.br",
+      "path": "/dentista/mg/andre-rufino"
+    }
+  ]
+}

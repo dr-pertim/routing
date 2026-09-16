@@ -1,0 +1,17 @@
+{
+  "name": "pertim-routing",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker para rotear domínios customizados pro Pertim",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler publish"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "wrangler": "^3.0.0",
+    "@cloudflare/workers-types": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}
