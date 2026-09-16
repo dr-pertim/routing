@@ -32,12 +32,13 @@ async function getWorkerId() {
       process.exit(1)
     }
 
-    // Procura pelo worker com o nome correto
-    const worker = data.result?.find(w => w.service === WORKER_NAME)
+    // Procura pelo worker com o nome correto (field é "id", não "service")
+    const worker = data.result?.find(w => w.id === WORKER_NAME)
 
     if (!worker) {
       console.error(`❌ Worker "${WORKER_NAME}" não encontrado`)
-      console.error(`Workers disponíveis: ${data.result?.map(w => w.service).join(', ')}`)
+      const available = data.result?.map(w => w.id).join(', ')
+      console.error(`Workers disponíveis: ${available || 'nenhum'}`)
       process.exit(1)
     }
 
