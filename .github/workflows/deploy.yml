@@ -8,8 +8,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    outputs:
-      worker-id: ${{ steps.get-id.outputs.id }}
     steps:
       - uses: actions/checkout@v3
 
@@ -27,33 +25,5 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Get Worker ID
-        id: get-id
-        run: |
-          ID=$(node scripts/get-worker-id.js)
-          echo "id=$ID" >> $GITHUB_OUTPUT
-          echo "✅ Worker ID: $ID"
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_WORKER_NAME: pertim-routing
-
-  register-domains:
-    needs: deploy
-    if: success()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Register domains
-        run: node scripts/register-domains.js
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_WORKER_ID: ${{ needs.deploy.outputs.worker-id }}
-          CLOUDFLARE_WORKER_NAME: pertim-routing
+      - name: ✅ Deploy concluído
+        run: echo "Worker atualizado! Custom Domains configurados manualmente no Cloudflare."
