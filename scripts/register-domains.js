@@ -9,11 +9,12 @@ import fs from 'fs'
 
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID
+const WORKER_ID = process.env.CLOUDFLARE_WORKER_ID
 const WORKER_NAME = process.env.CLOUDFLARE_WORKER_NAME || 'routing'
 const DOMAIN_FILTER = process.env.DOMAIN_FILTER
 
-if (!TOKEN || !ACCOUNT_ID) {
-  console.error('❌ ERRO: CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID são obrigatórios')
+if (!TOKEN || !ACCOUNT_ID || !WORKER_ID) {
+  console.error('❌ ERRO: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID e CLOUDFLARE_WORKER_ID são obrigatórios')
   process.exit(1)
 }
 
@@ -27,7 +28,8 @@ if (DOMAIN_FILTER) {
   console.log(`🎯 Filtrando por: ${DOMAIN_FILTER}`)
 }
 
-console.log(`\n📋 Domínios a registrar: ${domains.length}\n`)
+console.log(`\n📋 Domínios a registrar: ${domains.length}`)
+console.log(`🔑 Worker ID: ${WORKER_ID}\n`)
 domains.forEach((d, i) => console.log(`  ${i + 1}. ${d}`))
 console.log('')
 
@@ -43,8 +45,8 @@ async function registerDomains() {
     process.stdout.write(`${step} ${domain.padEnd(30)} ... `)
 
     try {
-      // API endpoint correto do Cloudflare
-      const url = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/services/${WORKER_NAME}/environments/production/routes`
+      // API endpoint usando o Worker ID
+      const url = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/scripts/${WORKER_ID}/routes`
 
       const response = await fetch(url, {
         method: 'POST',
@@ -70,7 +72,6 @@ async function registerDomains() {
       } else {
         const msg = data.errors?.[0]?.message || `HTTP ${response.status}`
         console.log(`❌ ${msg}`)
-        console.log(`   URL: ${url}`)
         failed++
       }
     } catch (err) {
