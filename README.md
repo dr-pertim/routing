@@ -64,12 +64,12 @@ git push
 
 **Se é a primeira vez que usa o domínio:**
 
-1. Repo → **Actions** → **Setup DNS (Create CNAMEs)**
+1. Repo → **Actions** → **Setup DNS (Register Custom Domains)**
 2. **Run workflow**
-3. Preecha o campo **Domain**: `novo-dominio.com.br`
+3. Preecha o campo **Domain**: `novo-dominio.com.br` (só serve pra achar a zona — o registro cobre TODOS os domínios listados em `domains.json` que pertencem a essa mesma zona, ex.: com e sem `www`)
 4. Clique **Run workflow**
 
-→ Cloudflare cria CNAMEs automaticamente e domínio aponta pro Worker ✅
+→ Cloudflare registra o(s) Custom Domain(s) e já cria o DNS record sozinho (não precisa de CNAME manual) ✅
 
 **Próximas vezes:** só precisa fazer push em `routes.json` e `domains.json`.
 
@@ -90,8 +90,13 @@ Adicione:
 2. **Create Token** → "Create Custom Token"
 3. Permissões necessárias:
    - `Account → Workers Scripts (Write)`
-   - `Zone → DNS (Edit)` ← importante pra criar CNAMEs
+   - `Zone → DNS (Edit)`
 4. Copia o token → Cola em GitHub Secrets
+
+**Nota:** a API de Custom Domains (`/accounts/{id}/workers/domains`, usada
+pelo `add-custom-domain.js`) funciona com Token normal — não precisa de
+Global API Key. Só um endpoint mais antigo (routes legado) exigia isso;
+não usamos mais.
 
 **CLOUDFLARE_ACCOUNT_ID:**
 1. https://dash.cloudflare.com/ (qualquer página)
@@ -125,7 +130,7 @@ routing/
 ├── routes.json               (mapeamento de rotas)
 ├── domains.json              (lista de domínios)
 ├── scripts/
-│   ├── create-cname.js       (cria CNAMEs no Cloudflare)
+│   ├── add-custom-domain.js  (registra Custom Domain no Worker — já cria o DNS record)
 │   └── get-zone-id.js        (busca Zone ID do domínio)
 ├── .github/workflows/
 │   ├── deploy.yml            (deploy do Worker - automático)

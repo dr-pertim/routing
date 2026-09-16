@@ -1,10 +1,10 @@
-name: Setup DNS (Create CNAMEs & Custom Domains)
+name: Setup DNS (Register Custom Domains)
 
 on:
   workflow_dispatch:
     inputs:
       domain:
-        description: 'Domínio principal (ex: drandrerufino.com.br)'
+        description: 'Domínio principal, só pra achar a zona (ex: drandrerufino.com.br)'
         required: true
         type: string
 
@@ -29,12 +29,9 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           DOMAIN: ${{ github.event.inputs.domain }}
 
-      - name: Create CNAMEs
-        run: node scripts/create-cname.js
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          ZONE_ID: ${{ steps.zone.outputs.zone_id }}
-
+      # Registra TODOS os domínios de domains.json que pertencem a essa zona
+      # (a API do Cloudflare cria o DNS record automaticamente — não precisa
+      # de um passo separado pra CNAME).
       - name: Register Custom Domains
         run: node scripts/add-custom-domain.js
         env:
@@ -43,4 +40,4 @@ jobs:
           ZONE_ID: ${{ steps.zone.outputs.zone_id }}
 
       - name: ✅ DNS configurado!
-        run: echo "✅ CNAMEs criados e Custom Domains registrados com sucesso!"
+        run: echo "✅ Custom Domains registrados com sucesso!"

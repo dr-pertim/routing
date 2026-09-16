@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * Adiciona Custom Domain ao Worker no Cloudflare
- * Assim que o CNAME é criado, registra o domínio no Worker
+ * Registra Custom Domains no Worker via API moderna do Cloudflare.
+ * Endpoint: PUT /accounts/{account_id}/workers/domains
+ * (é a mesma API por trás do botão "Add Custom Domain" na UI —
+ * ela cria o DNS record automaticamente, não precisa criar CNAME antes)
  */
 
 import fs from 'fs'
@@ -10,7 +12,7 @@ import fs from 'fs'
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID
 const ZONE_ID = process.env.ZONE_ID
-const WORKER_ID = process.env.WORKER_ID || 'pertim-routing'
+const WORKER_NAME = process.env.CLOUDFLARE_WORKER_NAME || 'pertim-routing'
 
 if (!TOKEN || !ACCOUNT_ID || !ZONE_ID) {
   console.error('❌ ERRO: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID e ZONE_ID são obrigatórios')
@@ -21,7 +23,7 @@ if (!TOKEN || !ACCOUNT_ID || !ZONE_ID) {
 const domainsData = JSON.parse(fs.readFileSync('./domains.json', 'utf8'))
 const domains = domainsData.domains || []
 
-console.log(`\n📋 Registrando ${domains.length} Custom Domain(s) no Worker\n`)
+console.log(`\n📋 Registrando ${domains.length} Custom Domain(s) no Worker "${WORKER_NAME}"\n`)
 
 async function addCustomDomains() {
   let success = 0
@@ -34,31 +36,32 @@ async function addCustomDomains() {
     process.stdout.write(`${step} ${domain.padEnd(30)} ... `)
 
     try {
-      // API endpoint pra adicionar Custom Domain
-      const url = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/services/${WORKER_ID}/environments/production/routes`
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          pattern: `${domain}/*`,
-          script: WORKER_ID,
-          zone_id: ZONE_ID
-        })
-      })
+      const response = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/domains`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${TOKEN}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            zone_id: ZONE_ID,
+            hostname: domain,
+            service: WORKER_NAME,
+            environment: 'production'
+          })
+        }
+      )
 
       const data = await response.json()
 
       if (data.success) {
         console.log('✅ Registrado')
         success++
-      } else if (data.errors?.[0]?.code === 10014) {
-        // Já existe
-        console.log('✓ Já registrado')
-        success++
+      } else if (data.errors?.[0]?.code === 100117) {
+        // Já existe DNS record apontando pra outro lugar
+        console.log(`❌ DNS já existe pra esse host (delete o record manual e tenta de novo)`)
+        failed++
       } else {
         const msg = data.errors?.[0]?.message || `HTTP ${response.status}`
         console.log(`❌ ${msg}`)
