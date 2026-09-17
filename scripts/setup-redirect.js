@@ -29,9 +29,13 @@ const HEADERS = {
   'Content-Type': 'application/json',
 }
 
-function rulesetBody() {
+function rulesetBody(existingId) {
   return {
-    name: 'Redirect rules ruleset',
+    // Ruleset já existente nessa fase (criado automaticamente pelo
+    // Cloudflare da 1ª vez que a fase é usada) vem com name fixo
+    // "default" — PUT com outro nome dá erro. Só ao CRIAR (POST, sem
+    // existingId) o nome é livre.
+    name: existingId ? 'default' : 'Redirect rules ruleset',
     kind: 'zone',
     phase: PHASE,
     rules: [
@@ -64,7 +68,7 @@ async function setupRedirect() {
   const url = existingId ? `${API_BASE}/rulesets/${existingId}` : `${API_BASE}/rulesets`
   const method = existingId ? 'PUT' : 'POST'
 
-  const res = await fetch(url, { method, headers: HEADERS, body: JSON.stringify(rulesetBody()) })
+  const res = await fetch(url, { method, headers: HEADERS, body: JSON.stringify(rulesetBody(existingId)) })
   const data = await res.json()
 
   if (data.success) {
