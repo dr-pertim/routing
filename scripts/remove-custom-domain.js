@@ -18,9 +18,13 @@ if (!TOKEN || !ACCOUNT_ID || !HOSTNAME) {
 }
 
 async function removeCustomDomain() {
-  const listRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/domains`, {
-    headers: { 'Authorization': `Bearer ${TOKEN}` }
-  })
+  // Filtra por hostname direto na API (em vez de listar tudo e comparar no
+  // cliente) — sem isso, se a conta tiver muitos domínios registrados
+  // (outros sites da plataforma), paginação pode esconder o resultado.
+  const listRes = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/domains?hostname=${encodeURIComponent(HOSTNAME)}`,
+    { headers: { 'Authorization': `Bearer ${TOKEN}` } }
+  )
   const listData = await listRes.json()
   if (!listData.success) {
     console.error('❌ Erro ao listar Custom Domains:', listData.errors?.[0]?.message)

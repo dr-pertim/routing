@@ -1,10 +1,10 @@
-name: Setup DNS (Register Custom Domains)
+name: Setup DNS (Custom Domain + Redirect)
 
 on:
   workflow_dispatch:
     inputs:
       domain:
-        description: 'Domínio principal, só pra achar a zona (ex: drandrerufino.com.br)'
+        description: 'Domínio raiz do site (ex: drandrerufino.com.br) — sem www'
         required: true
         type: string
 
@@ -29,15 +29,24 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           DOMAIN: ${{ github.event.inputs.domain }}
 
-      # Registra TODOS os domínios de domains.json que pertencem a essa zona
-      # (a API do Cloudflare cria o DNS record automaticamente — não precisa
-      # de um passo separado pra CNAME).
-      - name: Register Custom Domains
+      # Registra o www (e qualquer outro hostname que já esteja em
+      # domains.json) como Custom Domain do Worker — a API já cria o DNS
+      # record sozinha.
+      - name: Register Custom Domain (www)
         run: node scripts/add-custom-domain.js
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           ZONE_ID: ${{ steps.zone.outputs.zone_id }}
 
-      - name: ✅ DNS configurado!
-        run: echo "✅ Custom Domains registrados com sucesso!"
+      # Domínio raiz (sem www) NÃO passa pelo Worker — só redireciona pro
+      # www, que é quem de fato mascara o site.
+      - name: Setup redirect (raiz -> www)
+        run: node scripts/setup-redirect.js
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ZONE_ID: ${{ steps.zone.outputs.zone_id }}
+          APEX_DOMAIN: ${{ github.event.inputs.domain }}
+
+      - name: ✅ Domínio configurado!
+        run: echo "✅ www registrado no Worker + raiz redirecionando pro www"
