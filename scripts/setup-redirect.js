@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * Cria o Redirect Rule "domínio raiz -> www" na zona do Cloudflare (API de
- * Rulesets, fase http_request_dynamic_redirect). Cada profissional tem seu
- * próprio domínio = sua própria zona, então este PUT substitui a fase
- * inteira só DAQUELA zona (não tem risco de apagar regra de outro site).
+ * Cria/atualiza o Redirect Rule "domínio raiz -> www" na zona do Cloudflare
+ * (produto "Single Redirects", API de Rulesets). Cada profissional tem seu
+ * próprio domínio = sua própria zona, então isso não arrisca sobrescrever
+ * regra de outro site.
  *
- * Se um dia essa zona precisar de MAIS regras nessa fase (não só essa),
- * ajustar pra fazer GET antes e mesclar em vez de sobrescrever.
+ * Endpoint certo (doc oficial: developers.cloudflare.com/rules/url-forwarding
+ * /single-redirects/create-api/) é o genérico /zones/{id}/rulesets — NÃO o
+ * atalho /rulesets/phases/{phase}/entrypoint (que dava "Authentication
+ * error" mesmo com a permissão certa no token).
  */
 
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN
@@ -20,10 +22,21 @@ if (!TOKEN || !ZONE_ID || !APEX) {
   process.exit(1)
 }
 
-async function setupRedirect() {
-  const body = {
+const PHASE = 'http_request_dynamic_redirect'
+const API_BASE = `https://api.cloudflare.com/client/v4/zones/${ZONE_ID}`
+const HEADERS = {
+  Authorization: `Bearer ${TOKEN}`,
+  'Content-Type': 'application/json',
+}
+
+function rulesetBody() {
+  return {
+    name: 'Redirect rules ruleset',
+    kind: 'zone',
+    phase: PHASE,
     rules: [
       {
+        ref: `apex_to_www_${APEX.replace(/[^a-z0-9]/gi, '_')}`,
         description: `apex -> www (${APEX} -> ${TARGET})`,
         expression: `(http.host eq "${APEX}")`,
         action: 'redirect',
@@ -39,24 +52,26 @@ async function setupRedirect() {
       },
     ],
   }
+}
 
-  const res = await fetch(
-    `https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/rulesets/phases/http_request_dynamic_redirect/entrypoint`,
-    {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    }
-  )
+async function setupRedirect() {
+  // 1) Existe ruleset nessa fase? (GET do atalho por fase só pra achar o id —
+  //    não usamos PUT nele, só pra descobrir se precisa POST ou PUT/{id})
+  const getRes = await fetch(`${API_BASE}/rulesets/phases/${PHASE}/entrypoint`, { headers: HEADERS })
+  const getData = await getRes.json()
+  const existingId = getData.success ? getData.result?.id : null
+
+  const url = existingId ? `${API_BASE}/rulesets/${existingId}` : `${API_BASE}/rulesets`
+  const method = existingId ? 'PUT' : 'POST'
+
+  const res = await fetch(url, { method, headers: HEADERS, body: JSON.stringify(rulesetBody()) })
   const data = await res.json()
 
   if (data.success) {
-    console.log(`✅ Redirect configurado: ${APEX} → https://${TARGET}`)
+    console.log(`✅ Redirect configurado (${method}): ${APEX} → https://${TARGET}`)
   } else {
     console.error('❌ Erro ao criar redirect:', data.errors?.[0]?.message || `HTTP ${res.status}`)
+    console.error(JSON.stringify(data.errors, null, 2))
     process.exit(1)
   }
 }
