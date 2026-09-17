@@ -37,11 +37,13 @@ async function removeCustomDomain() {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${TOKEN}` }
   })
-  const delData = await delRes.json()
+  // Esse endpoint pode responder 200 com corpo vazio (sem JSON) no sucesso.
+  const raw = await delRes.text()
+  const delData = raw ? JSON.parse(raw) : { success: delRes.ok }
   if (delData.success) {
     console.log(`✅ "${HOSTNAME}" removido do Worker`)
   } else {
-    console.error('❌ Erro ao remover:', delData.errors?.[0]?.message)
+    console.error('❌ Erro ao remover:', delData.errors?.[0]?.message || `HTTP ${delRes.status}`)
     process.exit(1)
   }
 }
